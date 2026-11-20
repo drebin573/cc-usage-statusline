@@ -36,7 +36,12 @@ rate_5h=$(echo "$input" | jq -r '.rate_limits.five_hour.used_percentage // empty
 rate_7d=$(echo "$input" | jq -r '.rate_limits.seven_day.used_percentage // empty')
 reset_5h=$(echo "$input" | jq -r '.rate_limits.five_hour.resets_at // empty')
 cost=$(echo "$input" | jq -r '.cost.total_cost_usd // empty')
-duration_ms=$(echo "$input" | jq -r '.cost.total_api_duration_ms // empty')
+# Tokens currently in context = the last request's input (fresh + cache write
+# + cache read). Same figure the context bar's used_percentage is based on;
+# empty before the session's first response, like the bar.
+ctx_tokens=$(echo "$input" | jq -r '
+  .context_window.current_usage // empty
+  | (.input_tokens // 0) + (.cache_creation_input_tokens // 0) + (.cache_read_input_tokens // 0)')
 
 # Shorten home dir
 short_cwd=$(echo "$cwd" | sed "s|^$HOME|~|")
@@ -256,21 +261,19 @@ if [ -n "$git_branch" ]; then
 fi
 
 # Right side: three values aligned vertically under the line-1 bars —
-#   session time (under context bar) · 5h renewal (under 5h bar) · cost (under 7d bar)
+#   context tokens (under context bar) · 5h renewal (under 5h bar) · cost (under 7d bar)
 
-# Elapsed session time
-time_str=""
-if [ -n "$duration_ms" ]; then
-  total_sec=$(( duration_ms / 1000 ))
-  hrs=$(( total_sec / 3600 ))
-  mins=$(( (total_sec % 3600) / 60 ))
-  secs=$(( total_sec % 60 ))
-  if [ "$hrs" -gt 0 ]; then
-    time_str=$(printf '%dh%02dm' "$hrs" "$mins")
-  elif [ "$mins" -gt 0 ]; then
-    time_str=$(printf '%dm%02ds' "$mins" "$secs")
+# Current context size in tokens (e.g. 842, 9.4k, 52k, 1.0M)
+ctx_str=""
+if [ -n "$ctx_tokens" ]; then
+  if [ "$ctx_tokens" -ge 1000000 ]; then
+    ctx_str=$(awk -v n="$ctx_tokens" 'BEGIN{printf "%.1fM", n/1000000}')
+  elif [ "$ctx_tokens" -ge 10000 ]; then
+    ctx_str="$(( ctx_tokens / 1000 ))k"
+  elif [ "$ctx_tokens" -ge 1000 ]; then
+    ctx_str=$(awk -v n="$ctx_tokens" 'BEGIN{printf "%.1fk", n/1000}')
   else
-    time_str=$(printf '%ds' "$secs")
+    ctx_str="$ctx_tokens"
   fi
 fi
 
@@ -307,8 +310,8 @@ cell() {
 # visible width of a cell = max(text length, bar_w)
 cellvis() { _l=${#1}; [ "$_l" -ge "$bar_w" ] && printf '%s' "$_l" || printf '%s' "$bar_w"; }
 
-right2="$(cell "$time_str" "$dim") $(cell "$renew_str" "$muted_magenta") $(cell "$cost_str" "$muted_gold")"
-right2_len=$(( $(cellvis "$time_str") + 1 + $(cellvis "$renew_str") + 1 + $(cellvis "$cost_str") ))
+right2="$(cell "$ctx_str" "$muted_cyan") $(cell "$renew_str" "$muted_magenta") $(cell "$cost_str" "$muted_gold")"
+right2_len=$(( $(cellvis "$ctx_str") + 1 + $(cellvis "$renew_str") + 1 + $(cellvis "$cost_str") ))
 
 line2=$(align_lr "$left2" "$right2" "$left2_len" "$right2_len")
 

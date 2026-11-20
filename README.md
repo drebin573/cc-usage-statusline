@@ -1,6 +1,6 @@
 # cc-usage-statusline
 
-A clean status line for [Claude Code](https://claude.com/claude-code) that puts your session at a glance: context window fill, the 5-hour and 7-day rate-limit budgets, session cost and time, and a clickable repo link with the current branch.
+A clean status line for [Claude Code](https://claude.com/claude-code) that puts your session at a glance: context window fill, the 5-hour and 7-day rate-limit budgets, context size in tokens, session cost, and a clickable repo link with the current branch.
 
 <div align="center">
   <img src="preview.png" alt="annotated cc-usage-statusline" width="75%">
@@ -8,7 +8,7 @@ A clean status line for [Claude Code](https://claude.com/claude-code) that puts 
 
 ## The context bar tells you when to clear
 
-The color of the session context usage bar tells you when it's worth starting fresh. If you start to see yellow on the context usage bar, run `/compact` to summarize and shrink the context, or `/clear` to start a clean session before response quality starts to slip. If you see red, your context window is about to run out!
+The color of the session context usage bar tells you when it's worth starting fresh. If you start to see yellow on the context usage bar, run `/compact` to summarize and shrink the context, or `/clear` to start a clean session before response quality starts to slip. If you see red, your context window is about to run out! The token count under the bar shows the same thing as a number.
 
 ## Requirements
 
